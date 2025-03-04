@@ -4,6 +4,7 @@ const nodemailer = require("nodemailer");
 const cors = require("cors");
 const multer = require("multer");
 const pdfParse = require("pdf-parse");
+const fs = require("fs");
 const PDFDocument = require("pdfkit");
 const bodyParser = require("body-parser");
 
@@ -30,6 +31,8 @@ const transporter = nodemailer.createTransport({
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
+
+const upload2 = multer({ dest: "uploads/" });
 
 // Dummy function to validate email activity
 const validateEmailActivity = (email) => {
@@ -127,10 +130,42 @@ app.post("/api/send-mail", async (req, res) => {
 
 
 
+const extractEmails = (text) => {
+  return text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) || [];
+};
 
 
+app.post("/api/send-mail-bulk", upload2.single("pdf"), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
+  try {
+    const pdfBuffer = fs.readFileSync(req.file.path);
+    const pdfData = await pdfParse(pdfBuffer);
+    const emails = extractEmails(pdfData.text);
+    if (emails.length === 0) return res.status(400).json({ error: "No valid emails found in PDF" });
 
+    const { cc, bcc, subject, message } = req.body;
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: emails.join(","),
+      cc: cc ? cc.split(",").map((e) => e.trim()) : [],
+      bcc: bcc ? bcc.split(",").map((e) => e.trim()) : [],
+      subject,
+      text: message,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    // Delete uploaded file after processing
+    fs.unlinkSync(req.file.path);
+
+    res.status(200).json({ success: "Emails sent successfully!" });
+  } catch (error) {
+    console.error("Error sending email:", error);
+    res.status(500).json({ error: "Error sending email." });
+  }
+});
 
 
 
