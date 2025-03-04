@@ -4,7 +4,6 @@ import axios from "axios";
 const FileUpload = () => {
     const [file, setFile] = useState(null);
     const [uploading, setUploading] = useState(false);
-    const [emails, setEmails] = useState([]);
     const [message, setMessage] = useState("");
 
     // Handle file selection
@@ -28,10 +27,22 @@ const FileUpload = () => {
         try {
             const response = await axios.post("http://localhost:8000/validate-emails-pdf", formData, {
                 headers: { "Content-Type": "multipart/form-data" },
+                responseType: "blob", // Expecting a PDF file
             });
 
-            setEmails(response.data.emails || []);
-            setMessage("File uploaded successfully!");
+            if (response.data.type !== "application/json") {
+                // Create a download link for the PDF response
+                const url = window.URL.createObjectURL(new Blob([response.data]));
+                const link = document.createElement("a");
+                link.href = url;
+                link.setAttribute("download", "active_emails.pdf");
+                document.body.appendChild(link);
+                link.click();
+
+                setMessage("PDF downloaded successfully!");
+            } else {
+                setMessage("No active emails found in the file.");
+            }
         } catch (error) {
             setMessage("Error uploading file. Please try again.");
         } finally {
@@ -52,18 +63,6 @@ const FileUpload = () => {
                     {uploading ? "Uploading..." : "Upload PDF"}
                 </button>
                 {message && <p className="mt-3 text-center text-gray-700">{message}</p>}
-
-                {/* Display extracted emails */}
-                {emails.length > 0 && (
-                    <div className="mt-4">
-                        <h3 className="text-lg font-semibold">Extracted Emails:</h3>
-                        <ul className="mt-2 text-sm text-gray-700">
-                            {emails.map((email, index) => (
-                                <li key={index} className="border-b py-1">{email.email} - {email.status}</li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
             </div>
         </div>
     );

@@ -4,6 +4,7 @@ const nodemailer = require("nodemailer");
 const cors = require("cors");
 const multer = require("multer");
 const pdfParse = require("pdf-parse");
+const PDFDocument = require("pdfkit");
 const bodyParser = require("body-parser");
 
 
@@ -30,15 +31,31 @@ const transporter = nodemailer.createTransport({
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-
-
-
-
+// Dummy function to validate email activity
 const validateEmailActivity = (email) => {
-  // Dummy logic: Randomly mark some emails as inactive
-  const inactiveEmails = ["olduser@example.com", "inactive@mail.com"];
-  return inactiveEmails.includes(email) ? "Inactive" : "Active";
+    // Dummy logic: Mark some emails as inactive
+    const inactiveEmails = ["olduser@example.com", "inactive@mail.com"];
+    return inactiveEmails.includes(email) ? "Inactive" : "Active";
 };
+
+
+
+const generatePDF = (emails) => {
+  return new Promise((resolve, reject) => {
+      const doc = new PDFDocument();
+      let buffers = [];
+
+      doc.on("data", (chunk) => buffers.push(chunk));
+      doc.on("end", () => resolve(Buffer.concat(buffers)));
+      doc.on("error", (err) => reject(err));
+
+      doc.fontSize(16).text("List of Active Emails", { align: "center" }).moveDown();
+      emails.forEach((email) => doc.text(email));
+      doc.end();
+  });
+};
+
+
 
 // Route to handle PDF file upload
 app.post("/validate-emails-pdf", upload.single("file"), async (req, res) => {
@@ -54,13 +71,21 @@ app.post("/validate-emails-pdf", upload.single("file"), async (req, res) => {
       const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
       const emails = text.match(emailRegex) || [];
 
-      // Validate each email
-      const validatedEmails = emails.map((email) => ({
-          email,
-          status: validateEmailActivity(email),
-      }));
+      // Filter only active emails
+      const activeEmails = emails.filter((email) => validateEmailActivity(email) === "Active");
 
-      res.json({ emails: validatedEmails });
+      if (activeEmails.length === 0) {
+          return res.status(200).json({ message: "No active emails found." });
+      }
+
+      // Generate PDF with active emails
+      const pdfBuffer = await generatePDF(activeEmails);
+
+      res.set({
+          "Content-Type": "application/pdf",
+          "Content-Disposition": "attachment; filename=active_emails.pdf",
+      });
+      res.send(pdfBuffer);
   } catch (error) {
       console.error("Error processing PDF:", error);
       res.status(500).json({ message: "Error processing file." });
@@ -68,64 +93,26 @@ app.post("/validate-emails-pdf", upload.single("file"), async (req, res) => {
 });
 
 
+
 // API Route to Send Email
-app.post("/api/sponsor", async (req, res) => {
-  const { name, email } = req.body;
-
-  console.log(email);
-  console.log(name);
-
-  if (!name || !email) {
-    return res.status(400).json({ message: "Name and Email are required" });
-  }
-
-  const mailOptions = {                      
-    from: process.env.EMAIL_USER,
-    to: email,
-    subject: `Partnership Opportunity: Amplify Your Brand Reach with Quantum Musing`,
-    html: `
-      <p>Dear ${name},</p>
-
-      <p>I hope this message finds you well. I am reaching out to explore potential collaboration opportunities between <strong>Quantum Musing</strong> and your esteemed company. With a proven track record of delivering engaging content to a highly targeted audience, I believe we can drive significant brand visibility and ROI for your business.</p>
-
-      <p><strong>Let me introduce myself briefly:</strong></p>
-      <p>I am a tech enthusiast and digital content creator specializing in web development, AI, and programming. My content is designed to educate with an entertaining touch, making complex topics accessible and engaging for my audience.</p>
-
-      <p><strong>Here’s a snapshot of my platform's reach:</strong></p>
-      <ul>
-        <li><strong>Instagram:</strong> 54K+ followers with high engagement.</li>
-        <li><strong>Facebook:</strong> Active tech community.</li>
-        <li><strong>YouTube:</strong> Growing subscriber base with tech tutorials.</li>
-      </ul>
-
-      <p>My audience trusts my recommendations, presenting an excellent opportunity for your brand to connect with a relevant and passionate demographic. Whether through product reviews, tutorials, or promotional content, I can help your brand achieve authentic reach and measurable engagement.</p>
-
-      <p><strong>Why Partner with Me?</strong></p>
-      <ul>
-        <li><strong>Targeted Audience:</strong> My content resonates with a tech-savvy demographic.</li>
-        <li><strong>High Engagement:</strong> Ensures that your brand message is actively seen and interacted with.</li>
-        <li><strong>Authenticity:</strong> Organic and natural collaborations enhance brand credibility.</li>
-      </ul>
-
-      <p>If this opportunity aligns with your marketing goals, I would love to discuss how we can collaborate to create a campaign that resonates with my audience and delivers tangible results for your brand.</p>
-
-      <p>Looking forward to hearing from you!</p>
-
-      <p>Best regards,</p>
-      <p><strong>Quantum Musing</strong><br>
-      Digital Content Creator & Tech Enthusiast<br>
-      <a href="https://www.instagram.com/yashudeveloper">@yashudeveloper</a><br>
-      Email: ${process.env.EMAIL_USER}<br>
-      </p>
-    `,
-  };
-
+app.post("/api/send-mail", async (req, res) => {
   try {
+    const { email, cc, bcc, subject, message } = req.body;
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email.join(","), // Convert array to comma-separated string
+      cc: cc.length ? cc.join(",") : undefined,
+      bcc: bcc.length ? bcc.join(",") : undefined,
+      subject,
+      html: `<p>${message}</p>`, // Supports HTML formatting
+    };
+
     await transporter.sendMail(mailOptions);
-    res.status(200).json({ message: "Email sent successfully!" });
+    res.json({ success: true, message: "Email sent successfully!" });
   } catch (error) {
-    console.error("Error sending email:", error);
-    res.status(500).json({ message: "Error sending email" });
+    console.error("Email sending error:", error);
+    res.status(500).json({ success: false, message: "Error sending email." });
   }
 });
 
