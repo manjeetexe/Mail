@@ -96,23 +96,27 @@ app.post("/validate-emails-pdf", upload.single("file"), async (req, res) => {
 
 // API Route to Send Email
 app.post("/api/send-mail", async (req, res) => {
+  const { email, cc, bcc, subject, message } = req.body;
+
+  if (!email || !subject || !message) {
+    return res.status(400).json({ error: "Email, subject, and message are required." });
+  }
+
+  const mailOptions = {
+    from: process.env.SMTP_USER,
+    to: email,
+    cc: cc.length ? cc : undefined,
+    bcc: bcc.length ? bcc : undefined,
+    subject,
+    text: message,
+  };
+
   try {
-    const { email, cc, bcc, subject, message } = req.body;
-
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email.join(","), // Convert array to comma-separated string
-      cc: cc.length ? cc.join(",") : undefined,
-      bcc: bcc.length ? bcc.join(",") : undefined,
-      subject,
-      html: `<p>${message}</p>`, // Supports HTML formatting
-    };
-
     await transporter.sendMail(mailOptions);
-    res.json({ success: true, message: "Email sent successfully!" });
+    res.status(200).json({ success: "Email sent successfully!" });
   } catch (error) {
-    console.error("Email sending error:", error);
-    res.status(500).json({ success: false, message: "Error sending email." });
+    console.error("Error sending email:", error);
+    res.status(500).json({ error: "Error sending email." });
   }
 });
 
