@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import axios from "axios";
 
@@ -8,6 +8,20 @@ const EmailScheduler = () => {
         { to: "", cc: "", bcc: "", subject: "", message: "", scheduleTime: "" }
     ]);
     const [scheduledCampaigns, setScheduledCampaigns] = useState([]);
+
+    // Fetch scheduled emails from backend
+    const fetchScheduledEmails = async () => {
+        try {
+            const response = await axios.get("http://localhost:8000/sendmail/scheduled-mails");
+            setScheduledCampaigns(response.data.scheduledEmails);
+        } catch (error) {
+            console.error("Error fetching scheduled emails:", error);
+        }
+    };
+
+    useEffect(() => {
+        fetchScheduledEmails();
+    }, []);
 
     // Handle input changes
     const handleInputChange = (index, field, value) => {
@@ -23,17 +37,15 @@ const EmailScheduler = () => {
 
     // Remove an email
     const removeEmail = (index) => {
-        const updatedEmails = emails.filter((_, i) => i !== index);
-        setEmails(updatedEmails);
+        setEmails(emails.filter((_, i) => i !== index));
     };
 
     // Check if selected date is valid (future date only)
     const isValidScheduleTime = (time) => {
-        const selectedTime = new Date(time);
-        return selectedTime > new Date();
+        return new Date(time) > new Date();
     };
 
-    // Send request to backend to schedule the emails
+    // Schedule emails
     const scheduleCampaign = async () => {
         if (!campaignName.trim()) {
             alert("Please enter a campaign name.");
@@ -41,7 +53,7 @@ const EmailScheduler = () => {
         }
 
         const validEmails = emails.filter(email => email.to && email.subject && email.message && email.scheduleTime);
-        
+
         if (validEmails.length === 0) {
             alert("Please fill all fields including To, Subject, Message, and Schedule Time.");
             return;
@@ -53,13 +65,14 @@ const EmailScheduler = () => {
         }
 
         try {
-            await axios.post("http://localhost:8000/schedule-email", { campaignName, emails: validEmails });
+            await axios.post("http://localhost:8000/sendmail/schedule-mail", { campaignName, emails: validEmails });
 
-            setScheduledCampaigns([...scheduledCampaigns, { campaignName, emails: validEmails }]);
             setCampaignName("");
             setEmails([{ to: "", cc: "", bcc: "", subject: "", message: "", scheduleTime: "" }]);
             alert("Emails scheduled successfully!");
+            fetchScheduledEmails(); // Refresh scheduled emails
         } catch (error) {
+            console.error("Error scheduling emails:", error);
             alert("Error scheduling emails. Please try again.");
         }
     };

@@ -3,10 +3,12 @@ dotenv.config();
 const express = require('express');
 const app = express();
 const cors = require('cors');
+const cron = require("node-cron");
 const connectToDB = require('./Database/DB');
 const cookieParser = require('cookie-parser');
 const sendMailRoute = require('./Routes/SendmailRoute');
 const anlysisRoute = require('./Routes/Anlysis.route')
+const { checkAndSendEmails } = require("./Controllers/Sendmail.controller");
 
 
 
@@ -24,6 +26,11 @@ app.use(cookieParser());
 // Define a simple route
 app.get('/', (req, res) => {
   res.send('Hello, World!');
+});
+
+cron.schedule("* * * * *", () => {
+  console.log("Checking scheduled emails...");
+  checkAndSendEmails();
 });
 
 app.use('/sendmail', sendMailRoute  );

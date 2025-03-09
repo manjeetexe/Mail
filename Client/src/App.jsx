@@ -2,7 +2,7 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import Home from './page/Home'
 import Validator from './page/Validator'
-import Bulkmailer from './page/BulkMailer'
+
 import Navigate from './page/Navigate'
 import Team from './page/team'
 import Dashboard from './components/Dashboard';
@@ -26,7 +26,7 @@ const App = () => {
           
 
       </Route>
-        <Route path="/bulkmailer" element={<Bulkmailer />} />
+       \\
         <Route path='/developer' element={<Team />} />
        < Route path='/main' element={<Navigate />} />
       </Routes>
