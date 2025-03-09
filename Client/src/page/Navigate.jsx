@@ -12,7 +12,7 @@ const Navigate = () => {
                 <h2 className="text-3xl font-bold my-5">Bulk Mailer</h2>
             </div>
             <nav className="flex  flex-col space-y-4">
-                <Link to="/dashboard" className=" p-2 ">Dashboard</Link>
+                <Link to="/" className=" p-2 ">Dashboard</Link>
                 <Link to="/unlimited" className=" p-2  rounded">Unlimited Sending</Link>
                 <Link to="/deliverability" className=" p-2 rounded">High Deliverability</Link>
                 <Link to="/deliverability" className=" p-2 rounded">Validate Email</Link> 

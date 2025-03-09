@@ -5,7 +5,9 @@ import Validator from './page/Validator'
 import Bulkmailer from './page/BulkMailer'
 import Navigate from './page/Navigate'
 import Team from './page/team'
+import Dashboard from './components/Dashboard';
 import Layout from './layout'
+import BulkMail from './components/BulkMail'
 
 
 
@@ -14,12 +16,13 @@ const App = () => {
     <Router>
       <Routes>
       <Route path="/" element={<Layout />}>
-          <Route index element={<Validator />} /> 
+          <Route index element={<Dashboard />} /> 
+          <Route path="/unlimited" element={<BulkMail />} />
       </Route>
         
         <Route path="/validator" element={<Validator />} />
         <Route path="/bulkmailer" element={<Bulkmailer />} />
-        <Route path='/team' element={<Team />} />
+        <Route index element={<Team />} />
        < Route path='/main' element={<Navigate />} />
       </Routes>
     </Router>

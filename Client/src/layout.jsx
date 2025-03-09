@@ -5,8 +5,10 @@ import Navigate from './page/Navigate';
 const Layout = () => {
   return (
     <div className="flex">
+      <div className='w-64'>
       <Navigate />
-      <div className="flex-1 p-6 ml-64"> {/* Ensure space for the sidebar */}
+      </div>
+      <div className="flex-1  "> {/* Ensure space for the sidebar */}
         <Outlet /> {/* This is where other pages will be displayed */}
       </div>
     </div>
