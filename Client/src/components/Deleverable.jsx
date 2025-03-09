@@ -17,7 +17,7 @@ const SpamCheck = () => {
     const emailContent = `Subject: ${subject}\n\n${message}`;
 
     try {
-      const response = await fetch('http://localhost:8000/api/spam-check', {
+      const response = await fetch('http://localhost:8000/api/checkspam', {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
