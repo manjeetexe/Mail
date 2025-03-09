@@ -10,6 +10,7 @@ const UltimateSend = () => {
   const [cc, setCc] = useState('');
   const [bcc, setBcc] = useState('');
   const [file, setFile] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const handleSaveMessage = () => {
     if (subject && message) {
@@ -22,29 +23,65 @@ const UltimateSend = () => {
     }
   };
 
+
+
+
+
+
   const handleSendEmail = async () => {
-    const endpoint = selectedOption === 'few' ? '/sendmail/few-mail' : selectedOption === '/sendmail/bulk-mail' ? '/sendmail/send-bulk' : '/sendmail/ultimate-mail';
-    
-    const formData = new FormData();
-    formData.append('email', email);
-    formData.append('cc', cc);
-    formData.append('bcc', bcc);
-    formData.append('subject', subject);
-    formData.append('message', message);
-    if (file) {
-      formData.append('attachment', file);
+    if (!email || !subject || !message) {
+        alert("Please fill all required fields (Email, Subject, Message)");
+        return;
     }
 
+    setLoading(true);
+
+    const endpoint = selectedOption === 'few' 
+      ? 'http://localhost:8000/sendmail/few-mail' 
+      : selectedOption === 'bulk' 
+      ? 'http://localhost:8000/sendmail/bulk-mail' 
+      : 'http://localhost:8000/sendmail/ultimate-mail';
+
     try {
-      const response = await axios.post(endpoint, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      alert(response.data.message || 'Email Sent Successfully!');
+        let data;
+
+        if (file) {
+            const formData = new FormData();
+            formData.append('email', email);
+            formData.append('cc', cc);
+            formData.append('bcc', bcc);
+            formData.append('subject', subject);
+            formData.append('message', message);
+            formData.append('attachment', file);
+
+            data = formData;
+        } else {
+            data = { email, cc, bcc, subject, message };
+        }
+
+        const response = await axios.post(endpoint, data, {
+            headers: { 'Content-Type': file ? 'multipart/form-data' : 'application/json' }
+        });
+
+        alert(response.data.message || 'Email Sent Successfully!');
+        setSavedMessages([...savedMessages, { subject, message }]);
+
+        // Clear the form
+        setEmail('');
+        setCc('');
+        setBcc('');
+        setSubject('');
+        setMessage('');
+        setFile(null);
     } catch (error) {
-      console.error('Error sending email:', error);
-      alert('Failed to send email');
+        console.error('Error sending email:', error.response ? error.response.data : error.message);
+        alert('Failed to send email');
+    } finally {
+        setLoading(false);
     }
-  };
+};
+
+
 
   return (
     <div className='flex h-screen'>
@@ -66,29 +103,22 @@ const UltimateSend = () => {
           <form className="space-y-4">
             {selectedOption !== 'ultimate' && (
               <>
-                <input className="w-full p-2 border rounded" type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
+                <input className="w-full p-2 border rounded" type="email"  required placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
                 <input className="w-full p-2 border rounded" type="email" placeholder="CC" value={cc} onChange={e => setCc(e.target.value)} />
                 <input className="w-full p-2 border rounded" type="email" placeholder="BCC" value={bcc} onChange={e => setBcc(e.target.value)} />
               </>
             )}
-            <input 
-              className="w-full p-2 border rounded" 
-              type="text" 
-              placeholder="Subject" 
-              value={subject} 
-              onChange={e => setSubject(e.target.value)}
-              required 
-            />
-            <textarea 
-              className="w-full p-2 border rounded" 
-              placeholder="Message" 
-              rows="4" 
-              value={message} 
-              onChange={e => setMessage(e.target.value)}
-              required
-            ></textarea>
+            <input className="w-full p-2 border rounded" type="text" placeholder="Subject" value={subject} onChange={e => setSubject(e.target.value)} required />
+            <textarea className="w-full p-2 border rounded" placeholder="Message" rows="4" value={message} onChange={e => setMessage(e.target.value)} required></textarea>
             {selectedOption !== 'few' && <input className="w-full p-2 border rounded" type="file" accept="application/pdf" onChange={e => setFile(e.target.files[0])} />}
-            <button type="button" className="w-full bg-blue-600 text-white p-2 rounded" onClick={handleSendEmail}>Send Email</button>
+            <button 
+              type="button" 
+              className="w-full bg-blue-600 text-white p-2 rounded" 
+              onClick={handleSendEmail} 
+              disabled={loading}
+            >
+              {loading ? 'Sending...' : 'Send Email'}
+            </button>
             <button type="button" className="w-full bg-green-600 text-white p-2 rounded" onClick={handleSaveMessage}>Save Message</button>
           </form>
         </div>
