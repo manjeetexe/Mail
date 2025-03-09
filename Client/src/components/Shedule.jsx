@@ -10,12 +10,45 @@ const EmailScheduler = () => {
     const [scheduledCampaigns, setScheduledCampaigns] = useState([]);
 
     // Fetch scheduled emails from backend
+
+
+    const groupEmailsByCampaign = (emails) => {
+        const grouped = {};
+    
+        emails.forEach((email) => {
+            const campaign = email.campaignName || "Unnamed Campaign";
+    
+            if (!grouped[campaign]) {
+                grouped[campaign] = [];
+            }
+            grouped[campaign].push(email);
+        });
+    
+        return Object.entries(grouped).map(([campaignName, emails]) => ({
+            campaignName,
+            emails,
+        }));
+    };
+
+    
+
+
     const fetchScheduledEmails = async () => {
         try {
             const response = await axios.get("http://localhost:8000/sendmail/scheduled-mails");
-            setScheduledCampaigns(response.data.scheduledEmails);
+    
+            console.log("✅ Fetched Scheduled Emails:", response.data);
+    
+            if (response.data && Array.isArray(response.data.scheduledEmails)) {
+                const groupedCampaigns = groupEmailsByCampaign(response.data.scheduledEmails);
+                setScheduledCampaigns(groupedCampaigns);
+            } else {
+                console.error("❌ Unexpected response format:", response.data);
+                setScheduledCampaigns([]);
+            }
         } catch (error) {
             console.error("Error fetching scheduled emails:", error);
+            setScheduledCampaigns([]);
         }
     };
 
@@ -51,29 +84,45 @@ const EmailScheduler = () => {
             alert("Please enter a campaign name.");
             return;
         }
-
+    
         const validEmails = emails.filter(email => email.to && email.subject && email.message && email.scheduleTime);
-
+    
         if (validEmails.length === 0) {
             alert("Please fill all fields including To, Subject, Message, and Schedule Time.");
             return;
         }
-
+    
         if (!validEmails.every(email => isValidScheduleTime(email.scheduleTime))) {
             alert("Please select a future time for scheduling.");
             return;
         }
-
+    
+        console.log("📤 Sending request to schedule email...");
+        console.log("Request Data:", { campaignName, emails: validEmails });
+    
         try {
-            await axios.post("http://localhost:8000/sendmail/schedule-mail", { campaignName, emails: validEmails });
-
+            const response = await axios.post("http://localhost:8000/sendmail/schedule-mail", { campaignName, emails: validEmails });
+    
+            console.log("✅ Response from server:", response.data); // Log server response
+    
             setCampaignName("");
             setEmails([{ to: "", cc: "", bcc: "", subject: "", message: "", scheduleTime: "" }]);
             alert("Emails scheduled successfully!");
+    
             fetchScheduledEmails(); // Refresh scheduled emails
         } catch (error) {
-            console.error("Error scheduling emails:", error);
-            alert("Error scheduling emails. Please try again.");
+            console.error("❌ Error scheduling emails:", error);
+    
+            if (error.response) {
+                console.error("Server Response:", error.response.data);
+                alert(`Error: ${error.response.data.message || "Failed to schedule emails."}`);
+            } else if (error.request) {
+                console.error("No response received from server:", error.request);
+                alert("Error: No response from server. Please check the backend.");
+            } else {
+                console.error("Request setup error:", error.message);
+                alert("Error: Unable to send request. Please try again.");
+            }
         }
     };
 
@@ -161,23 +210,28 @@ const EmailScheduler = () => {
             </div>
 
             {/* Scheduled Campaigns List */}
-            {scheduledCampaigns.length > 0 && (
-                <div className="bg-white p-6 mt-6 rounded-lg shadow-lg w-full max-w-2xl">
-                    <h3 className="text-xl font-semibold mb-4">Scheduled Campaigns</h3>
-                    {scheduledCampaigns.map((campaign, index) => (
-                        <div key={index} className="mb-4 p-4 border rounded-lg shadow">
-                            <h4 className="font-semibold">{campaign.campaignName}</h4>
-                            <ul className="mt-2">
-                                {campaign.emails.map((email, i) => (
-                                    <li key={i} className="text-sm text-gray-700">
-                                        📩 {email.to} - <strong>Subject:</strong> {email.subject} - ⏳ {format(new Date(email.scheduleTime), "PPpp")}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    ))}
-                </div>
-            )}
+           {scheduledCampaigns.length > 0 && (
+    <div className="bg-white p-6 mt-6 rounded-lg shadow-lg w-full max-w-2xl">
+        <h3 className="text-xl font-semibold mb-4 text-gray-800">Scheduled Campaigns</h3>
+
+        {scheduledCampaigns.map((campaign, index) => (
+            <div key={index} className="mb-6 p-4 border border-gray-300 rounded-lg shadow-sm">
+                <h4 className="text-lg font-semibold text-blue-600">{campaign.campaignName}</h4>
+
+                {campaign.emails.map((email, idx) => (
+                    <div key={idx} className="mt-3 bg-gray-100 p-4 rounded-lg">
+                        <p><strong className="text-gray-700">To:</strong> {email.to}</p>
+                        {email.cc && <p><strong className="text-gray-700">CC:</strong> {email.cc}</p>}
+                        {email.bcc && <p><strong className="text-gray-700">BCC:</strong> {email.bcc}</p>}
+                        <p><strong className="text-gray-700">Subject:</strong> {email.subject}</p>
+                        <p><strong className="text-gray-700">Message:</strong> {email.message}</p>
+                        <p><strong className="text-gray-700">Schedule Time:</strong> {new Date(email.scheduleTime).toLocaleString()}</p>
+                    </div>
+                ))}
+            </div>
+        ))}
+    </div>
+)}
         </div>
     );
 };
