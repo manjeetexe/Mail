@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FaFilePdf, FaImage } from 'react-icons/fa';
-import ChatBox from './Chat';
+import Validator from './../page/Validator'
 
 const SpamCheck = () => {
   const [subject, setSubject] = useState('');
@@ -39,7 +39,7 @@ const SpamCheck = () => {
     <div className="min-h-screen bg-gray-100 flex flex-col p-6">
       <h1 className="text-3xl font-bold text-blue-600 py-3 mb-2">Spam Checker</h1>
       <div>
-        <div className='flex gap-3'>
+        <div className='flex items-start gap-3'>
         <form className="bg-white shadow-lg p-6 rounded-lg w-full max-w-2xl" onSubmit={handleSubmit}>
           <input 
             className="w-full p-2 border rounded mb-4" 
@@ -97,7 +97,7 @@ const SpamCheck = () => {
             )}
           </button>
         </form>
-            <ChatBox />
+            <Validator />
         </div>
 
         

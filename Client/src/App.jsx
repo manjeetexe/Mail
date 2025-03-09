@@ -20,12 +20,11 @@ const App = () => {
           <Route index element={<Dashboard />} /> 
           <Route path="/unlimited" element={<BulkMail />} />
           <Route path="/spam" element={<SpamCheck />} />
+          <Route path="/validator" element={<Validator />} />
 
       </Route>
-        
-        <Route path="/validator" element={<Validator />} />
         <Route path="/bulkmailer" element={<Bulkmailer />} />
-        <Route index element={<Team />} />
+        <Route path='/developer' element={<Team />} />
        < Route path='/main' element={<Navigate />} />
       </Routes>
     </Router>

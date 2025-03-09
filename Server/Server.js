@@ -1,199 +1,106 @@
-require("dotenv").config();
-const express = require("express");
-const nodemailer = require("nodemailer");
-const cors = require("cors");
-const multer = require("multer");
-const pdfParse = require("pdf-parse");
-const fs = require("fs");
-const PDFDocument = require("pdfkit");
-const bodyParser = require("body-parser");
-const axios = require('axios');
+import React, { useState } from "react";
+import axios from "axios";
 
+const FileUpload = () => {
+    const [file, setFile] = useState(null);
+    const [uploading, setUploading] = useState(false);
+    const [message, setMessage] = useState("");
+    const [activeEmails, setActiveEmails] = useState([]);
+    const [pdfBlob, setPdfBlob] = useState(null);
 
-const app = express();
-const PORT = 8000;
-
-app.use(cors());
-app.use(bodyParser.json());
-
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
-
-
-
-app.post('/api/spam-check', async (req, res) => {
-  try {
-    const { emailContent } = req.body;
-
-    const response = await axios.post('https://spamcheck.postmarkapp.com/filter', {
-      email: emailContent,
-      options: 'long'
-    }, {
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      }
-    });
-
-    res.json(response.data);
-  } catch (error) {
-    console.error('Error checking spam:', error);
-    res.status(500).json({ error: 'Failed to check spam' });
-  }
-});
-
-
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
-
-const upload2 = multer({ dest: "uploads/" });
-
-// Dummy function to validate email activity
-const validateEmailActivity = (email) => {
-    // Dummy logic: Mark some emails as inactive
-    const inactiveEmails = ["olduser@example.com", "inactive@mail.com"];
-    return inactiveEmails.includes(email) ? "Inactive" : "Active";
-};
-
-
-
-const generatePDF = (emails) => {
-  return new Promise((resolve, reject) => {
-      const doc = new PDFDocument();
-      let buffers = [];
-
-      doc.on("data", (chunk) => buffers.push(chunk));
-      doc.on("end", () => resolve(Buffer.concat(buffers)));
-      doc.on("error", (err) => reject(err));
-
-      doc.fontSize(16).text("List of Active Emails", { align: "center" }).moveDown();
-      emails.forEach((email) => doc.text(email));
-      doc.end();
-  });
-};
-
-
-
-// Route to handle PDF file upload
-app.post("/validate-emails-pdf", upload.single("file"), async (req, res) => {
-  if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded." });
-  }
-
-  try {
-      const pdfData = await pdfParse(req.file.buffer);
-      const text = pdfData.text;
-
-      // Extract emails from the text
-      const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-      const emails = text.match(emailRegex) || [];
-
-      // Filter only active emails
-      const activeEmails = emails.filter((email) => validateEmailActivity(email) === "Active");
-
-      if (activeEmails.length === 0) {
-          return res.status(200).json({ message: "No active emails found." });
-      }
-
-      // Generate PDF with active emails
-      const pdfBuffer = await generatePDF(activeEmails);
-
-      res.set({
-          "Content-Type": "application/pdf",
-          "Content-Disposition": "attachment; filename=active_emails.pdf",
-      });
-      res.send(pdfBuffer);
-  } catch (error) {
-      console.error("Error processing PDF:", error);
-      res.status(500).json({ message: "Error processing file." });
-  }
-});
-
-
-
-// API Route to Send Email
-app.post("/api/send-mail", async (req, res) => {
-  const { email, cc, bcc, subject, message } = req.body;
-
-  if (!email || !subject || !message) {
-    return res.status(400).json({ error: "Email, subject, and message are required." });
-  }
-
-  const mailOptions = {
-    from: process.env.SMTP_USER,
-    to: email,
-    cc: cc.length ? cc : undefined,
-    bcc: bcc.length ? bcc : undefined,
-    subject,
-    text: message,
-  };
-
-  try {
-    await transporter.sendMail(mailOptions);
-    res.status(200).json({ success: "Email sent successfully!" });
-  } catch (error) {
-    console.error("Error sending email:", error);
-    res.status(500).json({ error: "Error sending email." });
-  }
-});
-
-
-
-
-
-
-
-
-const extractEmails = (text) => {
-  return text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) || [];
-};
-
-
-app.post("/api/send-mail-bulk", upload2.single("pdf"), async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-
-  try {
-    const pdfBuffer = fs.readFileSync(req.file.path);
-    const pdfData = await pdfParse(pdfBuffer);
-    const emails = extractEmails(pdfData.text);
-    if (emails.length === 0) return res.status(400).json({ error: "No valid emails found in PDF" });
-
-    const { cc, bcc, subject, message } = req.body;
-
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: emails.join(","),
-      cc: cc ? cc.split(",").map((e) => e.trim()) : [],
-      bcc: bcc ? bcc.split(",").map((e) => e.trim()) : [],
-      subject,
-      text: message,
+    // Handle file selection
+    const handleFileChange = (event) => {
+        setFile(event.target.files[0]);
     };
 
-    await transporter.sendMail(mailOptions);
+    // Upload the file and process response
+    const handleUpload = async () => {
+        if (!file) {
+            setMessage("Please select a PDF file.");
+            return;
+        }
 
-    // Delete uploaded file after processing
-    fs.unlinkSync(req.file.path);
+        const formData = new FormData();
+        formData.append("file", file);
 
-    res.status(200).json({ success: "Emails sent successfully!" });
-  } catch (error) {
-    console.error("Error sending email:", error);
-    res.status(500).json({ error: "Error sending email." });
-  }
-});
+        setUploading(true);
+        setMessage("");
+        setActiveEmails([]);
+        setPdfBlob(null);
 
+        try {
+            const response = await axios.post("http://localhost:8000/validate-emails-pdf", formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+                responseType: "blob", // Expecting either a JSON or a PDF file
+            });
 
+            // Convert Blob to text first to check if it's JSON
+            const text = await response.data.text();
+            try {
+                // If it's JSON, extract message
+                const json = JSON.parse(text);
+                setMessage(json.message);
+                return;
+            } catch (error) {
+                // If parsing fails, it's a PDF
+                setPdfBlob(response.data);
+                setMessage("Emails validated. Download the PDF below.");
+            }
+        } catch (error) {
+            console.error("Upload error:", error);
+            setMessage("Error uploading file. Please try again.");
+        } finally {
+            setUploading(false);
+        }
+    };
 
+    // Download the stored PDF
+    const handleDownload = () => {
+        if (!pdfBlob) return;
 
+        const url = window.URL.createObjectURL(new Blob([pdfBlob], { type: "application/pdf" }));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", "active_emails.pdf");
+        document.body.appendChild(link);
+        link.click();
+    };
 
+    return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+                <h2 className="text-xl font-semibold mb-4 text-center">
+                    Upload PDF for Email Validation
+                </h2>
+                <input
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handleFileChange}
+                    className="mb-4 p-2 border rounded w-full"
+                />
+                <button
+                    onClick={handleUpload}
+                    className={`w-full p-2 rounded text-white ${uploading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}
+                    disabled={uploading}
+                >
+                    {uploading ? "Uploading..." : "Upload PDF"}
+                </button>
+                {message && <p className="mt-3 text-center text-gray-700">{message}</p>}
+            </div>
 
+            {/* Display Download Button */}
+            {pdfBlob && (
+                <div className="bg-white p-6 mt-6 rounded-lg shadow-lg w-full max-w-md text-center">
+                    <button
+                        onClick={handleDownload}
+                        className="w-full p-2 rounded text-white bg-green-600 hover:bg-green-700"
+                    >
+                        Download Active Emails PDF
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+};
 
- 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+export default FileUpload; 

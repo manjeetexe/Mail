@@ -15,7 +15,6 @@ const Navigate = () => {
                 <Link to="/" className=" p-2 ">Dashboard</Link>
                 <Link to="/unlimited" className=" p-2  rounded">Unlimited Sending</Link>
                 <Link to="/spam" className=" p-2 rounded">High Deliverability</Link>
-                <Link to="/deliverability" className=" p-2 rounded">Validate Email</Link> 
                 <Link to="/personalized" className=" p-2 rounded">Personalized Campaigns</Link>
                 <Link to="/analytics" className=" p-2 rounded">Real-time Analytics</Link>
                 <Link to="/smtp" className=" p-2 rounded">SMTP & API Integration</Link>
