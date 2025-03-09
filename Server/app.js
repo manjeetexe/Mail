@@ -6,6 +6,7 @@ const cors = require('cors');
 const connectToDB = require('./Database/DB');
 const cookieParser = require('cookie-parser');
 const sendMailRoute = require('./Routes/SendmailRoute');
+const anlysisRoute = require('./Routes/Anlysis.route')
 
 
 
@@ -25,7 +26,7 @@ app.get('/', (req, res) => {
   res.send('Hello, World!');
 });
 
-app.use('/users', userRoute);
-app.use('/captains', captainRoute);
+app.use('/sendmail', sendMailRoute  );
+app.use('/api', anlysisRoute );
 
 module.exports = app;
