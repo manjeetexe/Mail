@@ -7,6 +7,7 @@ const pdfParse = require("pdf-parse");
 const fs = require("fs");
 const PDFDocument = require("pdfkit");
 const bodyParser = require("body-parser");
+const axios = require('axios');
 
 
 const app = express();
@@ -26,7 +27,26 @@ const transporter = nodemailer.createTransport({
 
 
 
+app.post('/api/spam-check', async (req, res) => {
+  try {
+    const { emailContent } = req.body;
 
+    const response = await axios.post('https://spamcheck.postmarkapp.com/filter', {
+      email: emailContent,
+      options: 'long'
+    }, {
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    });
+
+    res.json(response.data);
+  } catch (error) {
+    console.error('Error checking spam:', error);
+    res.status(500).json({ error: 'Failed to check spam' });
+  }
+});
 
 
 const storage = multer.memoryStorage();

@@ -8,6 +8,7 @@ import Team from './page/team'
 import Dashboard from './components/Dashboard';
 import Layout from './layout'
 import BulkMail from './components/BulkMail'
+import SpamCheck from './components/Deleverable';
 
 
 
@@ -18,6 +19,8 @@ const App = () => {
       <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} /> 
           <Route path="/unlimited" element={<BulkMail />} />
+          <Route path="/spam" element={<SpamCheck />} />
+
       </Route>
         
         <Route path="/validator" element={<Validator />} />
