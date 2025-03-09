@@ -14,7 +14,7 @@ const Navigate = () => {
             <nav className="flex  flex-col space-y-4">
                 <Link to="/" className=" p-2 ">Dashboard</Link>
                 <Link to="/unlimited" className=" p-2  rounded">Unlimited Sending</Link>
-                <Link to="/spam" className=" p-2 rounded">High Deliverability</Link>
+                <Link to="/spam" className=" p-2 rounded">Spam checker and Validator</Link>
                 <Link to="/personalized" className=" p-2 rounded">Personalized Campaigns</Link>
                 <Link to="/analytics" className=" p-2 rounded">Real-time Analytics</Link>
                 <Link to="/smtp" className=" p-2 rounded">SMTP & API Integration</Link>

@@ -9,6 +9,7 @@ import Dashboard from './components/Dashboard';
 import Layout from './layout'
 import BulkMail from './components/BulkMail'
 import SpamCheck from './components/Deleverable';
+import Automation from './components/Shedule';
 
 
 
@@ -21,6 +22,8 @@ const App = () => {
           <Route path="/unlimited" element={<BulkMail />} />
           <Route path="/spam" element={<SpamCheck />} />
           <Route path="/validator" element={<Validator />} />
+          <Route path="/automation" element={<Automation />} />
+          
 
       </Route>
         <Route path="/bulkmailer" element={<Bulkmailer />} />
