@@ -5,8 +5,8 @@ const app = express();
 const cors = require('cors');
 const connectToDB = require('./Database/DB');
 const cookieParser = require('cookie-parser');
-const userRoute = require('./Routes/user.route');
-const captainRoute = require('./Routes/captain.route');
+const sendMailRoute = require('./Routes/SendmailRoute');
+
 
 
 
