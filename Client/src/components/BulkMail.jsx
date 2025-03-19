@@ -46,7 +46,7 @@ const UltimateSend = () => {
         formData.append('bcc', bcc);
         formData.append('subject', subject);
         formData.append('message', message);
-        if (file) formData.append('attachment', file);
+        if (file) formData.append('pdfFile', file);
         if (jsonFile) formData.append('jsonFile', jsonFile);
 
         const response = await axios.post(endpoint, formData, {

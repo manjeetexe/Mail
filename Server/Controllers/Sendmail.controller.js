@@ -3,9 +3,13 @@ const dotenv = require('dotenv');
 dotenv.config();
 const transporter = require("./../config/transpoter");
 const scheduledEmails = [];
+const fs = require('fs');
+const pdfParse = require('pdf-parse');
+const sendEmailService = require('../Services/sendEmail.service');
 
 
-const nodemailer = require("nodemailer");
+
+
 
 module.exports.fewMails = async function (req, res, next) {
     try {
@@ -39,10 +43,54 @@ module.exports.fewMails = async function (req, res, next) {
     }
 };
 
-module.exports.bulkMails = async function (req, res, next) {
 
-    res.status(200).json(req.captain)
-}
+
+
+
+exports.bulkMails = async (req, res) => {
+    try {
+        const { subject, message, cc, bcc } = req.body;
+        const jsonFile = req.files?.jsonFile;
+        const pdfFile = req.files?.pdfFile;
+
+        if (!jsonFile || !pdfFile) {
+            return res.status(400).json({ error: 'Both JSON and PDF files are required!' });
+        }
+
+        // Extract Gmail API Credentials
+        let clientSecret;
+        try {
+            const jsonData = JSON.parse(jsonFile.data.toString());
+            clientSecret = jsonData.installed.client_secret;
+        } catch (error) {
+            return res.status(400).json({ error: 'Invalid JSON file format!' });
+        }
+
+        // Extract Emails from PDF
+        const data = await pdfParse(pdfFile.data);
+        const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+        const emails = data.text.match(emailRegex) || [];
+
+        if (emails.length === 0) {
+            return res.status(400).json({ error: 'No valid emails found in the PDF!' });
+        }
+
+        console.log("Extracted Emails:", emails);
+        console.log("Client Secret:", clientSecret);
+
+        // Send bulk emails
+        const response = await sendEmailService.sendBulkEmails(emails, subject, message, cc, bcc, clientSecret);
+        
+        res.json(response);
+    } catch (error) {
+        console.error('Error sending bulk emails:', error);
+        res.status(500).json({ error: 'Failed to send bulk emails' });
+    }
+};
+
+
+
+
 
 module.exports.unlimateMails = async function (req, res, next) {
 
