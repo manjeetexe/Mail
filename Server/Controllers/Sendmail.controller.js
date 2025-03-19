@@ -47,6 +47,8 @@ module.exports.fewMails = async function (req, res, next) {
 
 
 
+
+
 exports.bulkMails = async (req, res) => {
     try {
         const { subject, message, cc, bcc } = req.body;
@@ -72,10 +74,13 @@ exports.bulkMails = async (req, res) => {
             return res.status(400).json({ error: "Invalid JSON file format!" });
         }
 
-        // ✅ Extract Emails from PDF File
+        // ✅ Convert PDF Buffer to Uint8Array & Extract Emails
         let emails = [];
         try {
-            const pdfData = await pdfParse(pdfFile.buffer);
+            const pdfBuffer = new Uint8Array(pdfFile.buffer); // Convert buffer properly
+            const pdfData = await pdfParse(pdfBuffer);
+            console.log("📜 Extracted PDF Text:", pdfData.text);
+
             const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
             emails = pdfData.text.match(emailRegex) || [];
         } catch (error) {
