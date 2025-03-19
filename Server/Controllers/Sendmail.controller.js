@@ -69,6 +69,13 @@ exports.bulkMails = async (req, res) => {
         try {
             const jsonData = JSON.parse(jsonFile.buffer.toString("utf-8"));
             clientSecret = jsonData.installed.client_secret;
+            clientId = jsonData.installed.client_id;
+            refreshToken = jsonData.installed.refresh_token;
+            accessToken = jsonData.installed.token;
+
+
+
+            
         } catch (error) {
             console.error("❌ JSON Parsing Error:", error);
             return res.status(400).json({ error: "Invalid JSON file format!" });
@@ -95,9 +102,10 @@ exports.bulkMails = async (req, res) => {
 
         console.log("✅ Extracted Emails:", emails);
         console.log("✅ Client Secret:", clientSecret);
+        console.log("✅ Client Id", clientId)
 
         // ✅ Send Bulk Emails
-        const response = await sendEmailService.sendBulkEmails(emails, subject, message, cc, bcc, clientSecret);
+        const response = await sendEmailService.sendBulkEmails(emails, subject, message, cc, bcc, clientSecret ,clientId ,refreshToken ,accessToken , );
         
         res.json(response);
     } catch (error) {

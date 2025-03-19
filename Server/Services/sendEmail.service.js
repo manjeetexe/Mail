@@ -1,13 +1,13 @@
 const nodemailer = require("nodemailer");
 
-exports.sendBulkEmails = async (emails, subject, message, cc, bcc, clientSecret) => {
+exports.sendBulkEmails = async (emails, subject, message, cc, bcc, clientSecret, clientId) => {
     try {
         const transporter = nodemailer.createTransport({
             service: "gmail",
             auth: {
                 type: "OAuth2",
                 user: "your-email@gmail.com", // Change to your Gmail
-                clientId: "your-client-id",  // Keep this from Google Cloud
+                clientId: clientId,  // Keep this from Google Cloud
                 clientSecret: clientSecret,  // Use extracted secret from JSON file
                 refreshToken: "your-refresh-token", // Keep this from OAuth Playground
                 accessToken: "your-access-token" // Generate dynamically
