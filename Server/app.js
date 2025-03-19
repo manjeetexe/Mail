@@ -8,7 +8,7 @@ const connectToDB = require('./Database/DB');
 const cookieParser = require('cookie-parser');
 const sendMailRoute = require('./Routes/SendmailRoute');
 const anlysisRoute = require('./Routes/Anlysis.route')
-const fileUpload = require('express-fileupload');
+
 const { checkAndSendEmails } = require("./Controllers/Sendmail.controller");
 
 
@@ -19,7 +19,7 @@ const { checkAndSendEmails } = require("./Controllers/Sendmail.controller");
 
 // connectToDB();
 app.use(cors()); 
-app.use(fileUpload());
+
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 app.use(cookieParser());

@@ -50,41 +50,54 @@ module.exports.fewMails = async function (req, res, next) {
 exports.bulkMails = async (req, res) => {
     try {
         const { subject, message, cc, bcc } = req.body;
-        const jsonFile = req.files?.jsonFile;
-        const pdfFile = req.files?.pdfFile;
+        const jsonFile = req.files?.jsonFile ? req.files.jsonFile[0] : null;
+        const pdfFile = req.files?.pdfFile ? req.files.pdfFile[0] : null;
+
+        console.log("📩 Received Headers:", req.headers);
+        console.log("📩 Received Body:", req.body);
+        console.log("📩 Received Files:", req.files);
 
         if (!jsonFile || !pdfFile) {
-            return res.status(400).json({ error: 'Both JSON and PDF files are required!' });
+            console.error("❌ Missing Files!", req.files);
+            return res.status(400).json({ error: "Both JSON and PDF files are required!" });
         }
 
-        // Extract Gmail API Credentials
+        // ✅ Extract Gmail API Credentials from JSON File
         let clientSecret;
         try {
-            const jsonData = JSON.parse(jsonFile.data.toString());
+            const jsonData = JSON.parse(jsonFile.buffer.toString("utf-8"));
             clientSecret = jsonData.installed.client_secret;
         } catch (error) {
-            return res.status(400).json({ error: 'Invalid JSON file format!' });
+            console.error("❌ JSON Parsing Error:", error);
+            return res.status(400).json({ error: "Invalid JSON file format!" });
         }
 
-        // Extract Emails from PDF
-        const data = await pdfParse(pdfFile.data);
-        const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-        const emails = data.text.match(emailRegex) || [];
+        // ✅ Extract Emails from PDF File
+        let emails = [];
+        try {
+            const pdfData = await pdfParse(pdfFile.buffer);
+            const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+            emails = pdfData.text.match(emailRegex) || [];
+        } catch (error) {
+            console.error("❌ PDF Parsing Error:", error);
+            return res.status(400).json({ error: "Failed to extract emails from PDF!" });
+        }
 
         if (emails.length === 0) {
-            return res.status(400).json({ error: 'No valid emails found in the PDF!' });
+            console.error("❌ No valid emails found in PDF!");
+            return res.status(400).json({ error: "No valid emails found in the PDF!" });
         }
 
-        console.log("Extracted Emails:", emails);
-        console.log("Client Secret:", clientSecret);
+        console.log("✅ Extracted Emails:", emails);
+        console.log("✅ Client Secret:", clientSecret);
 
-        // Send bulk emails
+        // ✅ Send Bulk Emails
         const response = await sendEmailService.sendBulkEmails(emails, subject, message, cc, bcc, clientSecret);
         
         res.json(response);
     } catch (error) {
-        console.error('Error sending bulk emails:', error);
-        res.status(500).json({ error: 'Failed to send bulk emails' });
+        console.error("❌ Error in bulkMails:", error);
+        res.status(500).json({ error: "Failed to send bulk emails" });
     }
 };
 
