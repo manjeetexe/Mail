@@ -13,4 +13,4 @@ router.get("/scheduled-mails", sendMailController.getScheduledEmails );
 
 
 
-module.exports = router
+module.exports = router 
