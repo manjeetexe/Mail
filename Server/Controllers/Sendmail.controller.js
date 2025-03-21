@@ -6,10 +6,12 @@ const scheduledEmails = [];
 const fs = require('fs');
 const pdfParse = require('pdf-parse');
 const sendEmailService = require('../Services/sendEmail.service');
+const Mail = require('nodemailer/lib/mailer');
 
 
 
 const oauthCredentials = {};
+const Maildata = {};
 
 module.exports.fewMails = async function (req, res, next) {
     try {
@@ -47,29 +49,41 @@ module.exports.fewMails = async function (req, res, next) {
 exports.handleOAuthCallback = async (req, res) => {
     try {
         const { code } = req.query;
-        
 
-       const clientSecret = oauthCredentials.clientSecret 
-       const clientId = oauthCredentials.clientId 
-       const redirectUri =    oauthCredentials.redirectUri 
-
-
-
-        console.log(code , clientId , clientSecret , redirectUri)
+        // Ensure oauthCredentials are properly set
+        const { clientSecret, clientId, redirectUri } = oauthCredentials;
 
         if (!code || !clientId || !clientSecret || !redirectUri) {
             return res.status(400).json({ error: "Missing required parameters!" });
-
-            
         }
+
+        console.log("Auth Code:", code);
+        console.log("Client ID:", clientId);
+        console.log("Client Secret:", clientSecret);
+        console.log("Redirect URI:", redirectUri);
 
         // ✅ Get tokens dynamically
         const tokens = await sendEmailService.exchangeCodeForTokens(code, clientId, clientSecret, redirectUri);
 
-        res.json({ success: true, code });
+        if (!tokens || !tokens.access_token) {
+            return res.status(500).json({ error: "Failed to retrieve access token" });
+        }
+
+        // Ensure Maildata is defined
+        if (!Maildata || !Maildata.emails || !Maildata.subject || !Maildata.message) {
+            return res.status(400).json({ error: "Missing email data" });
+        }
+
+        const { message, subject, cc, bcc, emails } = Maildata;
+
+        // ✅ Send bulk emails
+        const response = await sendEmailService.sendBulkEmails(clientId, clientSecret, tokens, emails, subject, message, cc, bcc);
+
+        return res.json({ success: true, response });
+
     } catch (error) {
-        console.error("❌ Error exchanging auth code:", error);
-        res.status(500).json({ error: "Failed to exchange auth code for tokens" });
+        console.error("❌ Error in handleOAuthCallback:", error);
+        res.status(500).json({ error: "Internal server error" });
     }
 };
 
@@ -77,6 +91,12 @@ exports.handleOAuthCallback = async (req, res) => {
 exports.bulkMails = async (req, res) => {
     try {
         const {email, subject, message, cc, bcc } = req.body;
+
+        Maildata.subject = subject,
+        Maildata.message = message,
+        Maildata.cc = cc,
+        Maildata.bcc = bcc
+
         const jsonFile = req.files?.jsonFile ? req.files.jsonFile[0] : null;
         const pdfFile = req.files?.pdfFile ? req.files.pdfFile[0] : null;
 
@@ -128,6 +148,8 @@ exports.bulkMails = async (req, res) => {
             console.error("❌ No valid emails found in PDF!");
             return res.status(400).json({ error: "No valid emails found in the PDF!" });
         }
+
+        Maildata.emails = emails
 
         console.log("✅ Extracted Emails:", emails);
         console.log("✅ Client Secret:", clientSecret);
