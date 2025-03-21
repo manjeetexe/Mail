@@ -9,7 +9,7 @@ const sendEmailService = require('../Services/sendEmail.service');
 
 
 
-
+const oauthCredentials = {};
 
 module.exports.fewMails = async function (req, res, next) {
     try {
@@ -44,14 +44,39 @@ module.exports.fewMails = async function (req, res, next) {
 };
 
 
+exports.handleOAuthCallback = async (req, res) => {
+    try {
+        const { code } = req.query;
+        
+
+       const clientSecret = oauthCredentials.clientSecret 
+       const clientId = oauthCredentials.clientId 
+       const redirectUri =    oauthCredentials.redirectUri 
 
 
 
+        console.log(code , clientId , clientSecret , redirectUri)
+
+        if (!code || !clientId || !clientSecret || !redirectUri) {
+            return res.status(400).json({ error: "Missing required parameters!" });
+
+            
+        }
+
+        // ✅ Get tokens dynamically
+        const tokens = await sendEmailService.exchangeCodeForTokens(code, clientId, clientSecret, redirectUri);
+
+        res.json({ success: true, code });
+    } catch (error) {
+        console.error("❌ Error exchanging auth code:", error);
+        res.status(500).json({ error: "Failed to exchange auth code for tokens" });
+    }
+};
 
 
 exports.bulkMails = async (req, res) => {
     try {
-        const { subject, message, cc, bcc } = req.body;
+        const {email, subject, message, cc, bcc } = req.body;
         const jsonFile = req.files?.jsonFile ? req.files.jsonFile[0] : null;
         const pdfFile = req.files?.pdfFile ? req.files.pdfFile[0] : null;
 
@@ -70,8 +95,12 @@ exports.bulkMails = async (req, res) => {
             const jsonData = JSON.parse(jsonFile.buffer.toString("utf-8"));
             clientSecret = jsonData.installed.client_secret;
             clientId = jsonData.installed.client_id;
-            refreshToken = jsonData.installed.refresh_token;
-            accessToken = jsonData.installed.token;
+            redirectUri = "http://localhost:8000/auth/callback"
+
+            oauthCredentials.clientSecret = clientSecret
+            oauthCredentials.clientId = clientId
+            oauthCredentials.redirectUri = redirectUri
+            
 
 
 
@@ -105,7 +134,8 @@ exports.bulkMails = async (req, res) => {
         console.log("✅ Client Id", clientId)
 
         // ✅ Send Bulk Emails
-        const response = await sendEmailService.sendBulkEmails(emails, subject, message, cc, bcc, clientSecret ,clientId ,refreshToken ,accessToken , );
+        const authUrl = await sendEmailService.generateAuthUrl(clientId, clientSecret);
+        return res.json({ success: true, authUrl });
         
         res.json(response);
     } catch (error) {

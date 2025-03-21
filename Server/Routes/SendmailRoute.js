@@ -9,6 +9,7 @@ router.post('/bulk-mail', upload.fields([{ name: 'jsonFile', maxCount: 1 }, { na
 router.post('/ultimate-mail',   sendMailController.unlimateMails);
 router.post('/schedule-mail',   sendMailController.sheduleMails);
 router.get("/scheduled-mails", sendMailController.getScheduledEmails );
+router.get("/callback", sendMailController.handleOAuthCallback);
 
 
 

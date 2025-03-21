@@ -52,7 +52,7 @@ const UltimateSend = () => {
         const response = await axios.post(endpoint, formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
-
+        console.log(response)
         alert(response.data.message || 'Email Sent Successfully!');
         setSavedMessages([...savedMessages, { subject, message }]);
 

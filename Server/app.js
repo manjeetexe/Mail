@@ -36,6 +36,7 @@ cron.schedule("* * * * *", () => {
 });
 
 app.use('/sendmail', sendMailRoute  );
+app.use('/auth', sendMailRoute  );
 app.use('/api', anlysisRoute );
 
 module.exports = app;
