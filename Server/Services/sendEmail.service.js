@@ -62,9 +62,10 @@ exports.sendBulkEmails = async (clientId, clientSecret, tokens, emails, subject,
                     `CC: ${cc}`,
                     `BCC: ${bcc}`,
                     "MIME-Version: 1.0",
-                    "Content-Type: text/plain; charset=UTF-8",
+                    "Content-Type: text/html; charset=UTF-8",
                     "",
-                    message,
+                    `${message}`, 
+                    
                 ].join("\n");
 
                 const encodedMessage = Buffer.from(emailData).toString("base64");

@@ -45,7 +45,7 @@ const UltimateSend = () => {
         formData.append('cc', cc);
         formData.append('bcc', bcc);
         formData.append('subject', subject);
-        formData.append('message', message);
+        formData.append('message', `<html><body>${message}</body></html>`);
         if (file) formData.append('pdfFile', file);
         if (jsonFile) formData.append('jsonFile', jsonFile);
 
