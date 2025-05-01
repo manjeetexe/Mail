@@ -7,6 +7,7 @@ const fs = require('fs');
 const pdfParse = require('pdf-parse');
 const sendEmailService = require('../Services/sendEmail.service');
 const Mail = require('nodemailer/lib/mailer');
+const xlsx = require("xlsx");
 
 
 
@@ -16,6 +17,8 @@ const Maildata = {};
 module.exports.fewMails = async function (req, res, next) {
     try {
         const { email, subject, message, cc, bcc } = req.body;
+
+        console.log(req.body)
 
         if (!email || !subject || !message) {
             return res.status(400).json({ error: "All fields are required." });
@@ -74,10 +77,10 @@ exports.handleOAuthCallback = async (req, res) => {
             return res.status(400).json({ error: "Missing email data" });
         }
 
-        const { message, subject, cc, bcc, emails } = Maildata;
+        const { message, subject, cc, bcc, emails ,email} = Maildata;
 
         // ✅ Send bulk emails
-        const response = await sendEmailService.sendBulkEmails(clientId, clientSecret, tokens, emails, subject, message, cc, bcc);
+        const response = await sendEmailService.sendBulkEmails(clientId, clientSecret,email , tokens, emails, subject, message, cc, bcc);
 
         return res.json({ success: true, response });
 
@@ -90,82 +93,74 @@ exports.handleOAuthCallback = async (req, res) => {
 
 exports.bulkMails = async (req, res) => {
     try {
-        const {email, subject, message, cc, bcc } = req.body;
+        const { email, subject, message, cc, bcc } = req.body;
 
-        Maildata.subject = subject,
-        Maildata.message = message,
-        Maildata.cc = cc,
-        Maildata.bcc = bcc
+        Maildata.subject = subject;
+        Maildata.message = message;
+        Maildata.cc = cc;
+        Maildata.bcc = bcc;
+        Maildata.email = email;
 
-        const jsonFile = req.files?.jsonFile ? req.files.jsonFile[0] : null;
-        const pdfFile = req.files?.pdfFile ? req.files.pdfFile[0] : null;
+        const excelFile = req.files?.excelFile ? req.files.excelFile[0] : null;
+        const jsonFile = req.files?.jsonFile ? req.files.jsonFile[0] : null; // ✅ FIXED: missing declaration
 
         console.log("📩 Received Headers:", req.headers);
         console.log("📩 Received Body:", req.body);
         console.log("📩 Received Files:", req.files);
 
-        if (!jsonFile || !pdfFile) {
+        if (!jsonFile || !excelFile) {
             console.error("❌ Missing Files!", req.files);
-            return res.status(400).json({ error: "Both JSON and PDF files are required!" });
+            return res.status(400).json({ error: "Both JSON and Excel files are required!" });
         }
 
         // ✅ Extract Gmail API Credentials from JSON File
-        let clientSecret;
+        let clientSecret, clientId, redirectUri;
         try {
             const jsonData = JSON.parse(jsonFile.buffer.toString("utf-8"));
             clientSecret = jsonData.installed.client_secret;
             clientId = jsonData.installed.client_id;
-            redirectUri = "http://localhost:8000/auth/callback"
+            redirectUri = "http://localhost:8000/auth/callback";
 
-            oauthCredentials.clientSecret = clientSecret
-            oauthCredentials.clientId = clientId
-            oauthCredentials.redirectUri = redirectUri
-            
-
-
-
-            
+            oauthCredentials.clientSecret = clientSecret;
+            oauthCredentials.clientId = clientId;
+            oauthCredentials.redirectUri = redirectUri;
         } catch (error) {
             console.error("❌ JSON Parsing Error:", error);
             return res.status(400).json({ error: "Invalid JSON file format!" });
         }
 
-        // ✅ Convert PDF Buffer to Uint8Array & Extract Emails
+        // ✅ Parse XLSX and Extract Emails
         let emails = [];
         try {
-            const pdfBuffer = new Uint8Array(pdfFile.buffer); // Convert buffer properly
-            const pdfData = await pdfParse(pdfBuffer);
-            console.log("📜 Extracted PDF Text:", pdfData.text);
+            const workbook = xlsx.read(excelFile.buffer, { type: "buffer" });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const data = xlsx.utils.sheet_to_json(worksheet);
 
-            const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-            emails = pdfData.text.match(emailRegex) || [];
+            emails = data
+                .map(row => row.email || row.Email || row["Email ID"])
+                .filter(email => typeof email === "string");
+
+            if (emails.length === 0) throw new Error("No valid emails found in Excel file.");
         } catch (error) {
-            console.error("❌ PDF Parsing Error:", error);
-            return res.status(400).json({ error: "Failed to extract emails from PDF!" });
+            console.error("❌ Excel Parsing Error:", error);
+            return res.status(400).json({ error: "Failed to extract emails from Excel file!" });
         }
 
-        if (emails.length === 0) {
-            console.error("❌ No valid emails found in PDF!");
-            return res.status(400).json({ error: "No valid emails found in the PDF!" });
-        }
-
-        Maildata.emails = emails
+        Maildata.emails = emails;
 
         console.log("✅ Extracted Emails:", emails);
         console.log("✅ Client Secret:", clientSecret);
-        console.log("✅ Client Id", clientId)
+        console.log("✅ Client Id:", clientId);
 
         // ✅ Send Bulk Emails
         const authUrl = await sendEmailService.generateAuthUrl(clientId, clientSecret);
         return res.json({ success: true, authUrl });
-        
-        res.json(response);
     } catch (error) {
         console.error("❌ Error in bulkMails:", error);
         res.status(500).json({ error: "Failed to send bulk emails" });
     }
 };
-
 
 
 

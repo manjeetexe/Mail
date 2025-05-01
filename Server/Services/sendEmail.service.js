@@ -58,14 +58,16 @@ exports.sendBulkEmails = async (clientId, clientSecret, tokens, emails, subject,
             try {
                 const emailData = [
                     `To: ${email}`,
+                    `From: your-email@example.com`, // Sender email
                     `Subject: ${subject}`,
                     `CC: ${cc}`,
                     `BCC: ${bcc}`,
-                    "MIME-Version: 1.0",
-                    "Content-Type: text/html; charset=UTF-8",
+                    `MIME-Version: 1.0`,
+                    `Date: ${new Date().toUTCString()}`, // Add current date
+                    `Message-ID: <${Date.now()}@example.com>`, // Unique ID for tracking
+                    `Content-Type: text/html; charset=UTF-8`, // Ensure HTML content
                     "",
-                    `${message}`, 
-                    
+                    `${message}`, // Your HTML message content
                 ].join("\n");
 
                 const encodedMessage = Buffer.from(emailData).toString("base64");

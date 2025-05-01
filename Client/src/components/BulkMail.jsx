@@ -12,6 +12,9 @@ const UltimateSend = () => {
   const [file, setFile] = useState(null);
   const [jsonFile, setJsonFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [response, setresponse] = useState({})
+
 
   const handleSaveMessage = () => {
     if (subject && message) {
@@ -46,14 +49,20 @@ const UltimateSend = () => {
         formData.append('bcc', bcc);
         formData.append('subject', subject);
         formData.append('message', `<html><body>${message}</body></html>`);
-        if (file) formData.append('pdfFile', file);
+        if (file) formData.append('excelFile', file);
         if (jsonFile) formData.append('jsonFile', jsonFile);
 
         const response = await axios.post(endpoint, formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
         console.log(response)
-        alert(response.data.message || 'Email Sent Successfully!');
+        setresponse(response)
+
+                if (response.data.authUrl) {
+          setShowModal(true);
+        } else {
+          alert(response.data.message || 'Email Sent Successfully!');
+        }
         setSavedMessages([...savedMessages, { subject, message }]);
 
         // Clear the form
@@ -99,7 +108,9 @@ const UltimateSend = () => {
             )}
             <input className="w-full p-2 border rounded" type="text" placeholder="Subject" value={subject} onChange={e => setSubject(e.target.value)} required />
             <textarea className="w-full p-2 border rounded" placeholder="Message" rows="4" value={message} onChange={e => setMessage(e.target.value)} required></textarea>
-            {selectedOption !== 'few' && <input className="w-full p-2 border rounded" type="file" accept="application/pdf" onChange={e => setFile(e.target.files[0])} />}
+            <h1>xlsx file</h1>
+            <input className="w-full p-2 border rounded" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={e => setFile(e.target.files[0])} />
+            <h1>json file</h1>
             {selectedOption !== 'few' && <input className="w-full p-2 border rounded" type="file" accept="application/json" onChange={e => setJsonFile(e.target.files[0])} />}
             <button 
               type="button" 
@@ -134,6 +145,31 @@ const UltimateSend = () => {
           )}
         </div>
       </div>
+      {showModal && response?.data?.authUrl && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white p-6 rounded shadow-lg w-[90%] max-w-md text-center">
+            <h2 className="text-xl font-semibold mb-4">Authorization Required</h2>
+            <p className="mb-4">Please click the link below to authorize:</p>
+            <a 
+              href={response.data.authUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-600 underline break-words"
+            >
+              {response.data.authUrl}
+            </a>
+            <div className="mt-6">
+              <button 
+                className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                onClick={() => setShowModal(false)}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+          
     </div>
   );
 };
